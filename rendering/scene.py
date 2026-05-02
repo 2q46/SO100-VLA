@@ -2,8 +2,6 @@ import sapien
 import torch
 import numpy as np
 
-from transforms3d.euler import euler2quat
-
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils.registration import register_env
 from mani_skill.agents.robots import SO100
@@ -23,7 +21,7 @@ class PickPlaceCubeEnv(BaseEnv):
 
     def __init__(
             self, init_robot_qpos_noise=0.02,
-            init_cube_qpos_noise=0.02, init_xy_rad_noise=(-np.pi/4, np.pi/4),
+            init_cube_qpos_noise=0.04, init_xy_rad_noise=(-np.pi/4, np.pi/4),
             init_goal_qpos_noise=0.06, control_freq=20, render_freq=20,
             enable_shadow=True, robot_uids="so100",
             goal_radius=0.05, cube_half=0.02,
@@ -36,7 +34,9 @@ class PickPlaceCubeEnv(BaseEnv):
         self.init_goal_qpos_noise = init_goal_qpos_noise
         self.goal_radius = goal_radius
         self.cube_half = cube_half
-        self.device = torch.device("cuda")
+        self.device = (
+            torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        )
 
         sim_cfg = SimConfig(
             control_freq=control_freq,
@@ -86,7 +86,7 @@ class PickPlaceCubeEnv(BaseEnv):
                 q=randomization.random_quaternions(
                     n=self.num_envs, 
                     bounds=self.init_xy_rad_noise, 
-                    lock_x=True, lock_y=True
+                    lock_x=True, lock_y=True # only rotate about z
                 ),
             )
             cube_noise_pose.p[..., 2] = 0 # no z-level translation
@@ -100,7 +100,7 @@ class PickPlaceCubeEnv(BaseEnv):
                 q=randomization.random_quaternions(
                     n=self.num_envs, 
                     bounds=self.init_xy_rad_noise, 
-                    lock_x=True, lock_y=True
+                    lock_x=True, lock_y=True # only rotate about z
                 ),
             )
             goal_noise_pose.p[..., 2] = 0 # no z-level translation
@@ -109,11 +109,13 @@ class PickPlaceCubeEnv(BaseEnv):
     def _load_lighting(self, options):
         for scene in self.scene.sub_scenes:
             scene.ambient_light = [
-                np.random.uniform(0.4, 0.8), 
-                np.random.uniform(0.4, 0.8), 
-                np.random.uniform(0.4, 0.8)
+                np.random.uniform(0.2, 0.6), 
+                np.random.uniform(0.2, 0.6), 
+                np.random.uniform(0.2, 0.6)
             ]
-        pass
+            scene.add_directional_light([1, 1, -1], [1, 1, 1], shadow=True, shadow_scale=5, shadow_map_size=4096)
+            scene.add_directional_light([0, 0, -1], [1, 1, 1])
+        
 
     def _load_agent(self, options : dict) -> None :
 

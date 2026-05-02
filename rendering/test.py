@@ -1,4 +1,5 @@
 import gymnasium as gym
+import pyroki as pk
 from scene import PickPlaceCubeEnv
 from mani_skill.utils.wrappers import RecordEpisode
 from mani_skill.utils.structs.types import SimConfig, GPUMemoryConfig
