@@ -161,7 +161,7 @@ class PickPlaceCubeEnv(BaseEnv):
                     q=euler2quat(0, np.pi/2, 0)
                 )
             )
-            '''
+            ''' 
     
     def randomise_qpos(batch_size) -> torch.Tensor:
         # TODO: the domain randomizations for the box, robot and cube
