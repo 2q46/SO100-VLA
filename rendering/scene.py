@@ -23,8 +23,8 @@ class PickPlaceCubeEnv(BaseEnv):
 
     def __init__(
             self, init_robot_qpos_noise=0.02,
-            init_cube_qpos_noise=0.02, init_cube_xy_rad=np.pi/4,
-            init_goal_qpos_noise=0.02, control_freq=20, render_freq=20,
+            init_cube_qpos_noise=0.02, init_xy_rad_noise=(-np.pi/4, np.pi/4),
+            init_goal_qpos_noise=0.06, control_freq=20, render_freq=20,
             enable_shadow=True, robot_uids="so100",
             goal_radius=0.05, cube_half=0.02,
             *args, **kwargs
@@ -32,7 +32,7 @@ class PickPlaceCubeEnv(BaseEnv):
 
         self.init_robot_qpos_noise = init_robot_qpos_noise
         self.init_cube_qpos_noise = init_cube_qpos_noise
-        self.init_cube_xy_rad = init_cube_xy_rad
+        self.init_xy_rad_noise = init_xy_rad_noise
         self.init_goal_qpos_noise = init_goal_qpos_noise
         self.goal_radius = goal_radius
         self.cube_half = cube_half
@@ -78,13 +78,41 @@ class PickPlaceCubeEnv(BaseEnv):
             )
         ]
     
+    @property
+    def randomise_qpos_cube(self) -> Pose:
+        with torch.device(self.device):
+            cube_noise_pose = Pose.create_from_pq(
+                p=torch.randn((self.num_envs), 3) * self.init_cube_qpos_noise,
+                q=randomization.random_quaternions(
+                    n=self.num_envs, 
+                    bounds=self.init_xy_rad_noise, 
+                    lock_x=True, lock_y=True
+                ),
+            )
+            cube_noise_pose.p[..., 2] = 0 # no z-level translation
+        return cube_noise_pose
+    
+    @property
+    def randomise_qpos_goal(self) -> Pose:
+        with torch.device(self.device):
+            goal_noise_pose = Pose.create_from_pq(
+                p=torch.randn((self.num_envs), 3) * self.init_cube_qpos_noise,
+                q=randomization.random_quaternions(
+                    n=self.num_envs, 
+                    bounds=self.init_xy_rad_noise, 
+                    lock_x=True, lock_y=True
+                ),
+            )
+            goal_noise_pose.p[..., 2] = 0 # no z-level translation
+        return goal_noise_pose
+    
     def _load_lighting(self, options):
-        #for scene in self.scene.sub_scenes:
-        #    scene.ambient_light = [
-        #        np.random.uniform(0.4, 0.5), 
-        #        np.random.uniform(0.4, 0.5), 
-        #        np.random.uniform(0.4, 0.5)
-        #    ]
+        for scene in self.scene.sub_scenes:
+            scene.ambient_light = [
+                np.random.uniform(0.4, 0.8), 
+                np.random.uniform(0.4, 0.8), 
+                np.random.uniform(0.4, 0.8)
+            ]
         pass
 
     def _load_agent(self, options : dict) -> None :
@@ -117,56 +145,19 @@ class PickPlaceCubeEnv(BaseEnv):
             initial_pose=sapien.Pose(p=[-0.5, -0.3, 1e-3])
         )
 
-        self.cam_mount = self.scene.create_actor_builder().build_kinematic("camera_mount")
-
-
     def _initialize_episode(self, env_idx, options) -> None:
 
         with torch.device(self.device):
             
             batch_size = len(env_idx)
             self.table_scene.initialize(env_idx)
-            '''
-            init_cube_pos = torch.zeros((batch_size, 3))
-            init_cube_pos[..., :2] = torch.rand((batch_size,2)) * 0.2 - 0.1
-            init_cube_pos[..., 2] = self.cube_half
-            init_goal_pos = init_cube_pos.clone() + torch.tensor([0.1 + self.goal_radius, 0, 0])
-            init_goal_pos[..., 2] = 1e-3
-
-            cam_pose = sapien_utils.look_at(
-            eye=[5, -5.0, 3], target=init_cube_pos
-            )
-            cam_pose = Pose.create(cam_pose)
-            cam_pose = Pose.create_from_pq(
-                p=[-5, -5, 5],
-                q=[1, 0, 0, 0]
-            )
-            cam_pose = cam_pose * Pose.create_from_pq(
-                p = torch.rand((self.num_envs), 3) * 0.05 - 0.025,
-                q = randomization.random_quaternions(
-                    n=self.num_envs, device=self.device, bounds=(-np.pi/24, np.pi/24)
-                ),
-            )
-            self.cam_mount.set_pose(cam_pose)
 
             self.cube.set_pose(
-                Pose.create_from_pq(
-                    p=init_cube_pos,
-                    q=[1, 0, 0, 0]
-                )
+                self.cube.pose * self.randomise_qpos_cube
             )
             self.goal_region.set_pose(
-                Pose.create_from_pq(
-                    p=init_goal_pos,
-                    q=euler2quat(0, np.pi/2, 0)
-                )
+                self.goal_region.pose * self.randomise_qpos_goal
             )
-            ''' 
-    
-    def randomise_qpos(batch_size) -> torch.Tensor:
-        # TODO: the domain randomizations for the box, robot and cube
-        pass
-
 
     def evaluate(self) -> dict:
         

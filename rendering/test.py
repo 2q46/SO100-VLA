@@ -5,19 +5,19 @@ from mani_skill.utils.structs.types import SimConfig, GPUMemoryConfig
 
 env = gym.make(
     "PickPlaceCube-v1",
-    num_envs=128,
+    num_envs=4,
     obs_mode="state",
     control_mode="pd_joint_delta_pos",
-    render_mode="sensors", # human, sensors
+    render_mode="human", # human, sensors
 )
-
+'''
 env = RecordEpisode(
     env=env,
     output_dir="videos/",
     save_trajectory=False,
     max_steps_per_video=120
 ) 
-
+'''
 print(f"Observation space: {env.observation_space}")
 print(f"Observation space: {env.action_space}")
 
