@@ -138,6 +138,7 @@ class PickPlaceCubeEnv(BaseEnv):
             body_type="dynamic",
             initial_pose=sapien.Pose(p=[-0.5, -0.3, self.cube_half])
         )
+        '''
         self.goal_region = actors.build_box(
             scene=self.scene,
             half_sizes=[0.1, 0.1, 0.1],
@@ -146,7 +147,7 @@ class PickPlaceCubeEnv(BaseEnv):
             name="goal",
             initial_pose=sapien.Pose(p=[-0.5, -0.3, 1e-3])
         )
-
+        '''
     def _initialize_episode(self, env_idx, options) -> None:
 
         with torch.device(self.device):
@@ -157,16 +158,16 @@ class PickPlaceCubeEnv(BaseEnv):
             self.cube.set_pose(
                 self.cube.pose * self.randomise_qpos_cube
             )
-            self.goal_region.set_pose(
-                self.goal_region.pose * self.randomise_qpos_goal
-            )
+            #self.goal_region.set_pose(
+            #    self.goal_region.pose * self.randomise_qpos_goal
+            #)
 
     def evaluate(self) -> dict:
         
         return {
             "success" : torch.linalg.norm(
-                self.goal_region.pose.p[..., :2] - self.cube.pose.p[..., :2]
-            ) < self.goal_radius
+             self.cube.pose.p[..., :2]# - self.goal_region.pose.p[..., :2]
+            ) < 0 #self.goal_radius
         }
 
     def compute_normalized_dense_reward(self, obs, action, info) -> float:
