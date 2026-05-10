@@ -8,10 +8,10 @@ import pyroki as pk
 @jdc.jit
 def _solve_ik_jax_batched(
     robot: pk.Robot,
-    target_link_index: jax.Array,        # scalar
-    target_wxyz: jax.Array,               # (N, 4)
-    target_position: jax.Array,           # (N, 3)
-) -> jax.Array:                           # (N, num_joints)
+    target_link_index: jax.Array,       
+    target_wxyz: jax.Array,             
+    target_position: jax.Array,         
+) -> jax.Array:                        
     
     def solve_single(wxyz, pos):
         joint_var = robot.joint_var_cls(0)
